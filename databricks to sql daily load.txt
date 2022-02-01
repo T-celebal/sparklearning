@@ -1,0 +1,69 @@
+tablename = dbutils.widgets.text("tablename",'')
+date = dbutils.widgets.text("date",'')
+tablename = dbutils.widgets.get('tablename')
+date = dbutils.widgets.get('date')
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+from pyspark.sql.functions import input_file_name
+from pyspark.sql.functions import regexp_extract,col
+fp = "dbfs:/mnt/mountpointegs/DailyInput from 19_dec to 05_jan/*/*{0}*/{1}*.xml".format(tablename,date)
+df = spark.read.format('xml').options(rowTag='DocumentRecord', rootTag='DocumentElement').load('dbfs:/mnt/mountpointegs/DailyInput from 19_dec to 05_jan/*/*GameDetails*/2021-12-19*.xml')
+file_name_df =df.withColumn("input_file_name",input_file_name())
+date_extracted_df = file_name_df.withColumn("date",regexp_extract(col('input_file_name'),".zip/(\w+-\w+-\w+)(\s+)",1))
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# Define the service principal credentials for the Azure storage account
+adls_storage_account = "egsbiaccdev.dfs.core.windows.net"
+adls_storage_container = "demo"
+temp_blob_storage_account = "egsbiaccdev.dfs.core.windows.net"
+temp_blob_storage_container = "synapsedev"
+temp_blob_storage_folder = "databricks_load_new"
+temp_path = "abfss://{0}@{1}/{2}".format(temp_blob_storage_container,temp_blob_storage_account,temp_blob_storage_folder)
+sql_server_login_user = 'username'
+sql_server_login_password = 'password'
+sql_server = "egs-bi-synapse-dev"
+sql_server_port = "1433"
+sql_server_db = "devegsbidw"
+sql_stage_schema = "stage"
+sql_silver_schema = "bronze"
+load_target = 'EgmDetailstest'
+connection_string = "jdbc:sqlserver://{0}.sql.azuresynapse.net:{1};database={2};user={3}@{0};password={4};encrypt=false;trustServerCertificate=false;hostNameInCertificate=*.sql.azuresynapse.net;loginTimeout=30;".format(sql_server,sql_server_port,sql_server_db,sql_server_login_user,sql_server_login_password)
+print(connection_string)
+def WriteData(connection_string,load_target,temp_path,df):  
+  df.write \
+   .format("com.databricks.spark.sqldw") \
+   .option("url",f'{connection_string}') \
+   .option("forwardSparkAzureStorageCredentials", "true") \
+   .option("dbTable", f'{load_target}') \
+   .option("maxStrLength", "4000" )\
+   .option("tempDir", f'{temp_path}') \
+   .save()
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+spark.conf.set("fs.azure.account.key.egsbiaccdev.dfs.core.windows.net","b0kSQC/eqOQrvlQ0EcTwS1E3yvZr5OF2fUl8A/K81+h0GAM9E1rpiyjPkrsgTOaXQY7vCA==")
+sc._jsc.hadoopConfiguration().set(
+  "fs.azure.account.key.egsbiaccdev.dfs.core.windows.net",
+  "b0kSQC/eqOQrvlQ0EcTwS1E3yvZr5OF2fUl8A/K81+h0GAM9E1rpiyjPkrsgTOaXQY7vCA==")
+spark.conf.set("spark.databricks.sqldw.writeSemantics", "polybase")
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+WriteData(connection_string,"Databrickstestt",temp_path,file_name_df)
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+file_name_df.write.option("header",True) \
+        .partitionBy("dtHour") \
+        .mode("overwrite") \
+        .parquet("/tmp/egs.parquet")

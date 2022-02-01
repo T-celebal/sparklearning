@@ -1,0 +1,40 @@
+select Concat([name],'(',substring(occupation,1,1),')')
+from occupations
+order by Concat([name],'(',substring(occupation,1,1),')')
+
+select concat('There are a total of',' ',count([occupation]),' ', lower(occupation),'s','.')
+from occupations
+group by occupation
+order by count(occupation),occupation asc
+
+================================================================
+SELECT [Doctor], [Professor], [Singer], [Actor] FROM   
+(
+    SELECT ROW_NUMBER() OVER (PARTITION BY Occupation ORDER BY Name) ROW_NO, 
+    ISNULL(NULL,Name) as Name, Occupation
+    FROM Occupations
+) AS t 
+PIVOT(
+    MAX(Name)
+    FOR Occupation IN (
+        [Doctor], 
+        [Professor], 
+        [Singer], 
+        [Actor]
+    )
+) AS pivot_table
+ORDER BY ROW_NO;
+
+================================================================
+select Area1,Area2,Area3,
+Case when  Area1+Area2>Area3 and  Area2+Area3>Area1 and Area1+Area3>Area2
+Then
+Case when Area1=Area2 OR Area1=Area3 and Area2=Area3 Then 'Isosceles'
+When Area1=Area2  and Area2=Area3 Then 'Equilateral'
+--When Area1<>Area3 and  Area2<>Area3 and Area1<>Area2 Then 'Scalene'
+Else 'Scalen'
+END
+Else
+    'Not a Triangle'
+End as 'result'
+from dbo.triangles

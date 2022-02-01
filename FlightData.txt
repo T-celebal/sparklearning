@@ -1,0 +1,15 @@
+[Yesterday 17:40] Hitesh Chahar
+[05:38 pm] Akshat Arorastorage_account_name='akshatarorastorage'
+container_name='input1'
+storage_account_key='X099j1/+JNRHyvJjm1a81mbJ0lBgfJqjNl5C4EryyQA3tMKcfBKCX9g0BihTFf7tBahkWj8k1BAsmUaw1ZMHuw=='
+spark.conf.set(f"fs.azure.account.key.akshatarorastorage.blob.core.windows.net",storage_account_key)
+[05:38 pm] Akshat Aroradf=spark.read.csv(f"wasbs://input1@akshatarorastorage.blob.core.windows.net/flightdatajson.csv", header=True, inferSchema=True, sep = "|")
+[05:38 pm] Akshat Arorafrom pyspark.sql.types import StructType, ArrayType, MapType, StringType[05:39 pm] Akshat Arorafrom pyspark.sql.functions import *
+[05:39 pm] Akshat AroraUpdateddf=df.withColumn("travellerdetails",from_json("travellerdetails",ArrayType(MapType(StringType(),StringType())))).
+withColumn("newtravellerdetails",explode("travellerdetails"))[05:39 pm] Akshat Arorafrom pyspark.sql.functions import colNewdf.select(col("*"),
+col("newtravellerdetails").getItem("LastName").alias("LastName"), col("newtravellerdetails").getItem("Title").alias("Title"),col("newtravellerdetails")
+.getItem("Nationality").alias("Nationality"),col("newtravellerdetails").getItem("Passport").alias("Passport"), col("newtravellerdetails").getItem("Email")
+.alias("Email"), col("newtravellerdetails").getItem("FrequentAirline").alias("FrequentAirline"), col("newtravellerdetails").getItem("eticketnumber")
+.alias("eticketnumber"), col("newtravellerdetails").getItem("BaggageTypeOnward").alias("BaggageTypeOnward"),col("newtravellerdetails").getItem("PlaceOfIssue")
+.alias("PlaceOfIssue")).display()
+
